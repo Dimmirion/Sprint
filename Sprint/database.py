@@ -2,7 +2,7 @@ import os
 import psycopg2
 from psycopg2 import sql
 from dotenv import load_dotenv
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 load_dotenv()
 
@@ -77,9 +77,9 @@ class Database:
             query = sql.SQL("""
                 INSERT INTO pereval_added (
                     user_id, coord_id, beauty_title, title, other_titles, connect,
-                    winter_level, summer_level, autumn_level, spring_level
+                    winter_level, summer_level, autumn_level, spring_level, status
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'new')
                 RETURNING id
             """)
             self.cursor.execute(query, (
@@ -124,3 +124,153 @@ class Database:
             print(f"Error linking image to pereval: {e}")
             self.conn.rollback()
             return False
+
+    def get_pereval_by_id(self, pereval_id: int) -> Optional[Dict[str, Any]]:
+        try:
+            query = sql.SQL("""
+                SELECT * FROM pereval_added WHERE id = %s
+            """)
+            self.cursor.execute(query, (pereval_id,))
+            return self.cursor.fetchone()
+        except Exception as e:
+            print(f"Error getting pereval by id: {e}")
+            return None
+
+    def get_user_by_id(self, user_id: int) -> Optional[Dict[str, Any]]:
+        try:
+            query = sql.SQL("""
+                SELECT * FROM users WHERE id = %s
+            """)
+            self.cursor.execute(query, (user_id,))
+            return self.cursor.fetchone()
+        except Exception as e:
+            print(f"Error getting user by id: {e}")
+            return None
+
+    def get_coords_by_id(self, coord_id: int) -> Optional[Dict[str, Any]]:
+        try:
+            query = sql.SQL("""
+                SELECT * FROM coords WHERE id = %s
+            """)
+            self.cursor.execute(query, (coord_id,))
+            return self.cursor.fetchone()
+        except Exception as e:
+            print(f"Error getting coordinates by id: {e}")
+            return None
+
+    def get_level_by_id(self, level_id: int) -> Optional[Dict[str, Any]]:
+        try:
+            query = sql.SQL("""
+                SELECT * FROM levels WHERE id = %s
+            """)
+            self.cursor.execute(query, (level_id,))
+            return self.cursor.fetchone()
+        except Exception as e:
+            print(f"Error getting level by id: {e}")
+            return None
+
+    def get_images_for_pereval(self, pereval_id: int) -> Optional[List[Dict[str, Any]]]:
+        try:
+            query = sql.SQL("""
+                SELECT i.id, i.title 
+                FROM images i
+                JOIN pereval_images pi ON i.id = pi.image_id
+                WHERE pi.pereval_id = %s
+            """)
+            self.cursor.execute(query, (pereval_id,))
+            return self.cursor.fetchall()
+        except Exception as e:
+            print(f"Error getting images for pereval: {e}")
+            return None
+
+    def update_coords(self, coord_id: int, latitude: float, longitude: float, height: int) -> bool:
+        try:
+            query = sql.SQL("""
+                UPDATE coords 
+                SET latitude = %s, longitude = %s, height = %s
+                WHERE id = %s
+            """)
+            self.cursor.execute(query, (latitude, longitude, height, coord_id))
+            self.conn.commit()
+            return True
+        except Exception as e:
+            print(f"Error updating coordinates: {e}")
+            self.conn.rollback()
+            return False
+
+    def update_level(self, level_id: int, winter: str, summer: str, autumn: str, spring: str) -> bool:
+        try:
+            query = sql.SQL("""
+                UPDATE levels 
+                SET winter = %s, summer = %s, autumn = %s, spring = %s
+                WHERE id = %s
+            """)
+            self.cursor.execute(query, (winter, summer, autumn, spring, level_id))
+            self.conn.commit()
+            return True
+        except Exception as e:
+            print(f"Error updating level: {e}")
+            self.conn.rollback()
+            return False
+
+    def update_pereval(self, pereval_id: int, **kwargs) -> bool:
+        if not kwargs:
+            return False
+
+        try:
+            set_clause = ", ".join([f"{key} = %s" for key in kwargs.keys()])
+            values = list(kwargs.values())
+            values.append(pereval_id)
+
+            query = sql.SQL(f"""
+                UPDATE pereval_added 
+                SET {set_clause}
+                WHERE id = %s
+            """)
+            self.cursor.execute(query, values)
+            self.conn.commit()
+            return True
+        except Exception as e:
+            print(f"Error updating pereval: {e}")
+            self.conn.rollback()
+            return False
+
+    def delete_images_for_pereval(self, pereval_id: int) -> bool:
+        try:
+            # Сначала получаем ID изображений для этого перевала
+            self.cursor.execute("SELECT image_id FROM pereval_images WHERE pereval_id = %s", (pereval_id,))
+            image_ids = [row[0] for row in self.cursor.fetchall()]
+
+            if image_ids:
+                # Удаляем связи
+                self.cursor.execute("DELETE FROM pereval_images WHERE pereval_id = %s", (pereval_id,))
+                # Удаляем сами изображения
+                self.cursor.execute("DELETE FROM images WHERE id IN %s", (tuple(image_ids),))
+                self.conn.commit()
+            return True
+        except Exception as e:
+            print(f"Error deleting images for pereval: {e}")
+            self.conn.rollback()
+            return False
+
+    def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
+        try:
+            query = sql.SQL("""
+                SELECT * FROM users WHERE email = %s
+            """)
+            self.cursor.execute(query, (email,))
+            return self.cursor.fetchone()
+        except Exception as e:
+            print(f"Error getting user by email: {e}")
+            return None
+
+    def get_perevals_by_user_id(self, user_id: int) -> Optional[List[Dict[str, Any]]]:
+        try:
+            query = sql.SQL("""
+                SELECT * FROM pereval_added WHERE user_id = %s
+            """)
+            self.cursor.execute(query, (user_id,))
+            return self.cursor.fetchall()
+        except Exception as e:
+            print(f"Error getting perevals by user id: {e}")
+            return None
