@@ -1,0 +1,30 @@
+{
+  "user": {
+    "email": "test@example.com",
+    "fam": "Иванов",
+    "name": "Иван",
+    "otc": "Иванович",
+    "phone": "+79991234567"
+  },
+  "coords": {
+    "latitude": 45.123456,
+    "longitude": 90.654321,
+    "height": 2500
+  },
+  "beauty_title": "Перевал Дятлова",
+  "title": "Дятлова",
+  "other_titles": "Перевал Смерти",
+  "connect": "Соединяет долины рек",
+  "levels": {
+    "winter": "1A",
+    "summer": "1B",
+    "autumn": "1A",
+    "spring": "2A"
+  },
+  "images": [
+    {
+      "title": "Вид с перевала",
+      "data": "base64-encoded-image-data"
+    }
+  ]
+}
