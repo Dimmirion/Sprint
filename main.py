@@ -318,6 +318,63 @@ async def get_perevals_by_email(user_email: str = Query(..., alias="user__email"
             raise HTTPException(status_code=500, detail="Internal server error")
 
 
+from fastapi.openapi.utils import get_openapi
+
+
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    openapi_schema = get_openapi(
+        title="Mountain Pass API",
+        version="1.0.0",
+        description="API для управления данными о горных перевалах",
+        routes=app.routes,
+    )
+
+    # Добавляем примеры для документации
+    openapi_schema["paths"]["/submitData/"]["post"]["examples"] = {
+        "example1": {
+            "summary": "Пример добавления перевала",
+            "value": {
+                "user": {
+                    "email": "user@example.com",
+                    "fam": "Иванов",
+                    "name": "Иван",
+                    "otc": "Иванович",
+                    "phone": "+79261234567"
+                },
+                "coords": {
+                    "latitude": 45.3842,
+                    "longitude": 7.1525,
+                    "height": 1200
+                },
+                "beauty_title": "пер. ",
+                "title": "Перевал",
+                "other_titles": "Test pass",
+                "connect": "",
+                "levels": {
+                    "winter": "1A",
+                    "summer": "1A",
+                    "autumn": "1A",
+                    "spring": "1A"
+                },
+                "images": [
+                    {
+                        "title": "Вид с перевала",
+                        "data": "base64-encoded-image-data"
+                    }
+                ]
+            }
+        }
+    }
+
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+
+app.openapi = custom_openapi
+
+
 if __name__ == "__main__":
     import uvicorn
 
